@@ -1,7 +1,10 @@
-__all__ = ['open_lamda']
+__all__ = ['open_cdms',
+           'open_lamda',
+           'read_until']
 
 
 # standard library
+import re
 from logging import getLogger
 from pathlib import Path
 logger = getLogger(__name__)
@@ -18,6 +21,10 @@ DIR_RADICO = Path('~/.radico').expanduser()
 
 
 # functions
+def open_cdms(filename):
+    pass
+
+
 def open_lamda(filename):
     # make ~/.radico/lamda if it does not exist
     dir_lamda = DIR_RADICO / 'lamda'
@@ -39,3 +46,14 @@ def open_lamda(filename):
     
     # open file
     return data.open()
+
+
+def read_until(f, pattern):
+    lines = []
+
+    for line in f:
+        lines.append(line)
+        if re.search(pattern, line):
+            break
+
+    return '\n'.join(lines)
