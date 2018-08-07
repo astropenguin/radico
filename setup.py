@@ -5,6 +5,7 @@ from setuptools import setup
 # package configs
 requires = ['astropy >= 3.0',
             'numpy >= 1.13',
+            'requests >= 2.19',
             'xarray >= 0.10']
 
 packages = ['radico']
