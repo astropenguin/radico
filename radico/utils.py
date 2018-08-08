@@ -40,8 +40,10 @@ def open_lamda(filename):
         logger.info(f'{filename} does not exist in {dir_lamda}')
         logger.info(f'downloading {filename} from LAMDA ...')
 
+        r = requests.get(f'{URL_LAMDA}/{filename}')
+        r.raise_for_status()
+
         with data.open('w') as f:
-            r = requests.get(f'{URL_LAMDA}/{filename}')
             f.write(r.text)
     
     # open file
