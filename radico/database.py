@@ -3,6 +3,8 @@ __all__ = ['MolDB']
 
 # standard library
 import re
+from logging import getLogger
+logger = getLogger(__name__)
 
 
 # dependent packages
@@ -14,9 +16,10 @@ from astropy.constants import h, c, k_B
 
 
 # module constants
-h = h.value
-c = c.value
+h   = h.value
+c   = c.value
 k_B = k_B.value
+
 DIMS = 'lv_from', 'lv_to', 'T_kin', 'coll_p'
 
 COLL_P_LAMDA = {'1': 'H2',
@@ -119,10 +122,10 @@ def create_db_lamda(filename):
     with ra.open_lamda(filename) as f:
         # step 1
         ra.read_until(f, '^!')
-        molname = next(f).strip()
+        name = next(f).strip()
 
         ra.read_until(f, '^!')
-        molweight = float(next(f).strip())
+        weight = float(next(f).strip())
 
         ra.read_until(f, '^!')
         n_levels = int(next(f))
@@ -172,9 +175,10 @@ def create_db_lamda(filename):
     q = table_1['col4'].astype('U')
     E = table_1['col2'].astype('f8')
     g = table_1['col3'].astype('f8')
+    Q = table_1['col4'].astype('U')
 
     dims = DIMS[0]
-    coords = {dims: (dims, q)}
+    coords = {dims: (dims, Q)}
     E = xr.DataArray(E, coords, dims)
     g = xr.DataArray(g, coords, dims)
     
@@ -194,8 +198,8 @@ def create_db_lamda(filename):
         ein_A[u-1, l-1] = A_ul[i]
 
     dims = DIMS[:2]
-    coords = {dims[0]: (dims[0], q),
-              dims[1]: (dims[1], q)}
+    coords = {dims[0]: (dims[0], Q),
+              dims[1]: (dims[1], Q)}
 
     freq  = xr.DataArray(freq, coords, dims)
     ein_A = xr.DataArray(ein_A, coords, dims)
@@ -212,7 +216,7 @@ def create_db_lamda(filename):
 
         n_from   = table_3['col2'].astype('i8')
         n_to     = table_3['col3'].astype('i8')
-        gamma_ul = np.array(table_3.to_pandas())[:,3:]
+        gamma_ul = np.array(table_3.to_pandas())[:, 3:]
 
         shape = n_levels, n_levels, n_colltemps, 1
         gamma = np.full(shape, np.nan)
@@ -221,8 +225,8 @@ def create_db_lamda(filename):
             gamma[u-1, l-1, :, 0] = gamma_ul[i]
         
         dims = DIMS
-        coords = {dims[0]: (dims[0], q),
-                  dims[1]: (dims[1], q),
+        coords = {dims[0]: (dims[0], Q),
+                  dims[1]: (dims[1], Q),
                   dims[2]: (dims[2], colltemps),
                   dims[3]: (dims[3], [partner])}
 
@@ -234,8 +238,9 @@ def create_db_lamda(filename):
 
     # step 4
     db = xr.Dataset()
-    db['E'] = E
-    db['g'] = g
+    db['name']  = name
+    db['E']     = E
+    db['g']     = g
     db['freq']  = freq
     db['ein_A'] = ein_A
     db['gamma'] = gamma
