@@ -179,8 +179,7 @@ def create_db_lamda(filename):
     
     # create database as xarray.Dataset
     # step 1
-    q = table_1['col4'].astype('U')
-    E = table_1['col2'].astype('f8')
+    E = table_1['col2'].astype('f8') * 1e2*c
     g = table_1['col3'].astype('f8')
     Q = table_1['col4'].astype('U')
 
