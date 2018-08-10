@@ -52,41 +52,128 @@ def db_cdms(filename):
     pass
 
 
-def db_lamda(filename):
+def create_db_lamda(filename):
+    # read molecular data
     with ra.open_lamda(filename) as f:
+        # step 1
         ra.read_until(f, '^!')
-        name = next(f).strip()
+        molname = next(f).strip()
 
         ra.read_until(f, '^!')
-        weight = float(next(f).strip())
+        molweight = float(next(f).strip())
 
         ra.read_until(f, '^!')
         n_levels = int(next(f))
 
         ra.read_until(f, '^!')
-        levels = ra.read_until(f, f'^\s*{n_levels}')
+        lines = ra.read_until(f, f'^\s*{n_levels}')
+        table_1 = ascii.read(lines)
 
+        # step 2
         ra.read_until(f, '^!')
         n_transitions = int(next(f))
     
         ra.read_until(f, '^!')
-        transisions = ra.read_until(f, f'^\s*{n_transitions}')
+        lines = ra.read_until(f, f'^\s*{n_transitions}')
+        table_2 = ascii.read(lines)
+
+        # step 3
+        li_partner = []
+        li_n_colltrans = []
+        li_n_colltemps = []
+        li_colltemps = []
+        li_table_3 = []
 
         ra.read_until(f, '^!')
         n_partners = int(next(f))
 
         for i in range(n_partners):
             ra.read_until(f, '^!')
-            partner = re.search('^(\d+)', next(f))[0]
+            li_partner.append(re.search('^(\d+)', next(f))[0])
         
             ra.read_until(f, '^!')
-            n_colltrans = int(next(f))
+            li_n_colltrans.append(int(next(f)))
 
             ra.read_until(f, '^!')
-            n_colltemps = int(next(f))
+            li_n_colltemps.append(int(next(f)))
 
             ra.read_until(f, '^!')
-            colltemps = next(f).strip()
+            li_colltemps.append(np.array(next(f).split(), 'f8'))
 
             ra.read_until(f, '^!')
-            collrates = ra.read_until(f, f'^\s*{n_colltrans}')
+            lines = ra.read_until(f, f'^\s*{li_n_colltrans[i]}')
+            li_table_3.append(ascii.read(lines))
+    
+    # create database as xarray.Dataset
+    # step 1
+    q = table_1['col4'].astype('U')
+    E = table_1['col2'].astype('f8')
+    g = table_1['col3'].astype('f8')
+
+    dims = DIMS[0]
+    coords = {dims: (dims, q)}
+    E = xr.DataArray(E, coords, dims)
+    g = xr.DataArray(g, coords, dims)
+    
+    # step 2
+    n_from = table_2['col2'].astype('i8')
+    n_to   = table_2['col3'].astype('i8')
+    A_ul   = table_2['col4'].astype('f8')
+    f_ul   = table_2['col5'].astype('f8') * 1e9
+
+    shape = n_levels, n_levels
+    freq  = np.full(shape, np.nan)
+    ein_A = np.full(shape, np.nan)
+
+    for i, (u, l) in enumerate(zip(n_from, n_to)):
+        freq[u-1, l-1]  = f_ul[i]
+        freq[l-1, u-1]  = f_ul[i]
+        ein_A[u-1, l-1] = A_ul[i]
+
+    dims = DIMS[:2]
+    coords = {dims[0]: (dims[0], q),
+              dims[1]: (dims[1], q)}
+
+    freq  = xr.DataArray(freq, coords, dims)
+    ein_A = xr.DataArray(ein_A, coords, dims)
+
+    # step 3
+    li_gamma = []
+
+    for i in range(n_partners):
+        partner     = li_partner[i]
+        n_colltrans = li_n_colltrans[i]
+        n_colltemps = li_n_colltemps[i]
+        colltemps   = li_colltemps[i]
+        table_3     = li_table_3[i]
+
+        n_from   = table_3['col2'].astype('i8')
+        n_to     = table_3['col3'].astype('i8')
+        gamma_ul = np.array(table_3.to_pandas())[:,3:]
+
+        shape = n_levels, n_levels, n_colltemps, 1
+        gamma = np.full(shape, np.nan)
+
+        for i, (u, l) in enumerate(zip(n_from, n_to)):
+            gamma[u-1, l-1, :, 0] = gamma_ul[i]
+        
+        dims = DIMS
+        coords = {dims[0]: (dims[0], q),
+                  dims[1]: (dims[1], q),
+                  dims[2]: (dims[2], colltemps),
+                  dims[3]: (dims[3], [partner])}
+
+        gamma = xr.DataArray(gamma, coords, dims)
+        li_gamma.append(gamma)
+
+    gamma = xr.concat(li_gamma, dim=dims[3])
+
+    # step 4
+    db = xr.Dataset()
+    db['E'] = E
+    db['g'] = g
+    db['freq']  = freq
+    db['ein_A'] = ein_A
+    db['gamma'] = gamma
+
+    return db
