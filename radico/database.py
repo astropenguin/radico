@@ -94,19 +94,19 @@ class MolDB:
     def to_netcdf(self, filename):
         self.db.to_netcdf(filename)
 
-    def einstein_Aul(self, transition):
-        pass
+    def freq(self, lv_from, lv_to):
+        lv_from, lv_to = str(lv_from), str(lv_to)
+        return self.db.freq.loc[lv_from, lv_to].values
     
-    def einstein_Bul(self, transition):
-        pass
+    def ein_A(self, lv_from, lv_to):
+        lv_from, lv_to = str(lv_from), str(lv_to)
+        return self.db.ein_A.loc[lv_from, lv_to].values
     
-    def einstein_Blu(self, transition):
-        pass
+    def ein_B(self, lv_from, lv_to):
+        lv_from, lv_to = str(lv_from), str(lv_to)
+        return self.db.ein_B.loc[lv_from, lv_to].values
     
-    def collision_Cul(self, transition, n_col, T_kin):
-        pass
-    
-    def collition_Clu(self, transition, n_col, T_kin):
+    def gamma(self, lv_from, lv_to, T_kin, coll_p):
         pass
     
     def n_crit(self, transition, T_kin):
