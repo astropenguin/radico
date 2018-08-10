@@ -6,16 +6,62 @@ import re
 
 
 # dependent packages
+import numpy as np
 import radico as ra
 import xarray as xr
+from astropy.io import ascii
+from astropy.constants import h, c, k_B
+
 
 # module constants
+h = h.value
+c = c.value
+k_B = k_B.value
+DIMS = 'lv_from', 'lv_to', 'T_kin', 'coll_p'
 
 
 # classes
 class MolDB:
-    def __init__(self):
-        pass
+    def __init__(self, *, db=None):
+        if db is None:
+            db = self._create_db()
+        
+        if 'rel_g' not in db:
+            db = self._calc_rel_g(db)
+
+        if 'ein_B' not in db:
+            db = self._calc_ein_B(db)
+        
+        self.db = db
+
+    @staticmethod
+    def _calc_rel_g(db):
+        g    = db.g.values
+        freq = db.freq.values
+
+        rel_g = g[:,None] / g
+        rel_g[np.isnan(freq)] = np.nan
+
+        db['rel_g'] = DIMS[:2], rel_g
+        return db
+    
+    @staticmethod
+    def _calc_ein_B(db):
+        freq  = db.freq.values
+        ein_A = db.ein_A.values
+        rel_g = db.rel_g.values
+
+        B_ul = (ein_A * c**2) / (2*h * freq**3)
+        B_lu = (rel_g * B_ul).T
+
+        ein_B = np.full_like(ein_A, np.nan)
+        tril  = np.tril_indices_from(ein_B)
+        triu  = np.triu_indices_from(ein_B)
+        ein_B[tril] = B_ul[tril]
+        ein_B[triu] = B_lu[triu]
+
+        db['ein_B'] = DIMS[:2], ein_B
+        return db
 
     @classmethod
     def from_cdms(cls, filename):
@@ -23,7 +69,16 @@ class MolDB:
 
     @classmethod
     def from_lamda(cls, filename):
-        pass
+        db = create_db_lamda(filename)
+        return cls(db=db)
+
+    @classmethod
+    def from_netcdf(cls, filename):
+        db = xr.open_dataset(filename)
+        return cls(db=db)
+
+    def to_netcdf(self, filename):
+        self.db.to_netcdf(filename)
 
     def einstein_Aul(self, transition):
         pass
