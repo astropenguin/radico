@@ -48,7 +48,7 @@ class MolDB:
 
 
 # functions
-def db_cdms(filename):
+def create_db_cdms(filename):
     pass
 
 
