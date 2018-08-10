@@ -45,6 +45,10 @@ class MolDB:
         self.db = db
 
     @staticmethod
+    def _create_db(db):
+        pass
+
+    @staticmethod
     def _calc_rel_g(db):
         g    = db.g.values
         freq = db.freq.values
