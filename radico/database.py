@@ -19,6 +19,13 @@ c = c.value
 k_B = k_B.value
 DIMS = 'lv_from', 'lv_to', 'T_kin', 'coll_p'
 
+COLL_P_LAMDA = {'1': 'H2',
+                '2': 'para-H2',
+                '3': 'otrho-H2',
+                '4': 'electrons',
+                '5': 'H',
+                '6': 'He'}
+
 
 # classes
 class MolDB:
@@ -144,7 +151,8 @@ def create_db_lamda(filename):
 
         for i in range(n_partners):
             ra.read_until(f, '^!')
-            li_partner.append(re.search('^(\d+)', next(f))[0])
+        li_partner.append(COLL_P_LAMDA[index])
+              index = re.search('^(\d+)', next(f))[0]
         
             ra.read_until(f, '^!')
             li_n_colltrans.append(int(next(f)))
@@ -222,6 +230,7 @@ def create_db_lamda(filename):
         li_gamma.append(gamma)
 
     gamma = xr.concat(li_gamma, dim=dims[3])
+    gamma[dims[3]] = gamma[dims[3]].astype('U')
 
     # step 4
     db = xr.Dataset()
