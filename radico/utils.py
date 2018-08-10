@@ -58,4 +58,4 @@ def read_until(f, pattern):
         if re.search(pattern, line):
             break
 
-    return '\n'.join(lines)
+    return ''.join(lines)
