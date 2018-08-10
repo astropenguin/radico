@@ -115,6 +115,9 @@ class MolDB:
     def Q(self, T_ex):
         pass
 
+    def __repr__(self):
+        return f'MolDB({self.db.name.values})'
+
 
 # functions
 def create_db_cdms(filename):
