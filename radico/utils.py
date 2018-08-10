@@ -45,7 +45,7 @@ def open_lamda(filename):
 
         with data.open('w') as f:
             f.write(r.text)
-    
+
     # open file
     return data.open()
 

@@ -35,13 +35,13 @@ class MolDB:
     def __init__(self, *, db=None):
         if db is None:
             db = self._create_db()
-        
+
         if 'rel_g' not in db:
             db = self._calc_rel_g(db)
 
         if 'ein_B' not in db:
             db = self._calc_ein_B(db)
-        
+
         self.db = db
 
     @staticmethod
@@ -58,7 +58,7 @@ class MolDB:
 
         db['rel_g'] = DIMS[:2], rel_g
         return db
-    
+
     @staticmethod
     def _calc_ein_B(db):
         freq  = db.freq.values
@@ -101,17 +101,17 @@ class MolDB:
     def ein_A(self, lv_from, lv_to):
         lv_from, lv_to = str(lv_from), str(lv_to)
         return self.db.ein_A.loc[lv_from, lv_to].values
-    
+
     def ein_B(self, lv_from, lv_to):
         lv_from, lv_to = str(lv_from), str(lv_to)
         return self.db.ein_B.loc[lv_from, lv_to].values
-    
+
     def gamma(self, lv_from, lv_to, T_kin, coll_p):
         pass
-    
+
     def n_crit(self, transition, T_kin):
         pass
-    
+
     def Q(self, T_ex):
         pass
 
@@ -144,7 +144,7 @@ def create_db_lamda(filename):
         # step 2
         ra.read_until(f, '^!')
         n_transitions = int(next(f))
-    
+
         ra.read_until(f, '^!')
         lines = ra.read_until(f, f'^\s*{n_transitions}')
         table_2 = ascii.read(lines)
@@ -163,7 +163,7 @@ def create_db_lamda(filename):
             ra.read_until(f, '^!')
             index = re.search('^(\d+)', next(f))[0]
             li_partner.append(COLL_P_LAMDA[index])
-        
+
             ra.read_until(f, '^!')
             li_n_colltrans.append(int(next(f)))
 
@@ -176,7 +176,7 @@ def create_db_lamda(filename):
             ra.read_until(f, '^!')
             lines = ra.read_until(f, f'^\s*{li_n_colltrans[i]}')
             li_table_3.append(ascii.read(lines))
-    
+
     # create database as xarray.Dataset
     # step 1
     E = table_1['col2'].astype('f8') * 1e2*c
@@ -187,7 +187,7 @@ def create_db_lamda(filename):
     coords = {dims: (dims, Q)}
     E = xr.DataArray(E, coords, dims)
     g = xr.DataArray(g, coords, dims)
-    
+
     # step 2
     n_from = table_2['col2'].astype('i8')
     n_to   = table_2['col3'].astype('i8')
@@ -229,7 +229,7 @@ def create_db_lamda(filename):
 
         for i, (u, l) in enumerate(zip(n_from, n_to)):
             gamma[u-1, l-1, :, 0] = gamma_ul[i]
-        
+
         dims = DIMS
         coords = {dims[0]: (dims[0], Q),
                   dims[1]: (dims[1], Q),
