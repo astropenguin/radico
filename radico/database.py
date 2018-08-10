@@ -97,7 +97,7 @@ class MolDB:
     def freq(self, lv_from, lv_to):
         lv_from, lv_to = str(lv_from), str(lv_to)
         return self.db.freq.loc[lv_from, lv_to].values
-    
+
     def ein_A(self, lv_from, lv_to):
         lv_from, lv_to = str(lv_from), str(lv_to)
         return self.db.ein_A.loc[lv_from, lv_to].values
@@ -161,8 +161,8 @@ def create_db_lamda(filename):
 
         for i in range(n_partners):
             ra.read_until(f, '^!')
-        li_partner.append(COLL_P_LAMDA[index])
-              index = re.search('^(\d+)', next(f))[0]
+            index = re.search('^(\d+)', next(f))[0]
+            li_partner.append(COLL_P_LAMDA[index])
         
             ra.read_until(f, '^!')
             li_n_colltrans.append(int(next(f)))
@@ -250,5 +250,4 @@ def create_db_lamda(filename):
     db['freq']  = freq
     db['ein_A'] = ein_A
     db['gamma'] = gamma
-
     return db
