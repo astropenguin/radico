@@ -16,8 +16,15 @@ import requests
 
 # module constants
 URL_CDMS  = ''
-URL_LAMDA = 'http://home.strw.leidenuniv.nl/~moldata/datafiles/'
+URL_LAMDA = 'http://home.strw.leidenuniv.nl/~moldata/datafiles'
 DIR_RADICO = Path('~/.radico').expanduser()
+DIR_CDMS   = DIR_RADICO / 'cdms'
+DIR_LAMDA  = DIR_RADICO / 'lamda'
+
+
+# make directories
+DIR_CDMS.mkdir(parents=True, exist_ok=True)
+DIR_LAMDA.mkdir(parents=True, exist_ok=True)
 
 
 # functions
@@ -26,28 +33,29 @@ def open_cdms(filename):
 
 
 def open_lamda(filename):
-    # make ~/.radico/lamda if it does not exist
-    dir_lamda = DIR_RADICO / 'lamda'
-    dir_lamda.mkdir(parents=True, exist_ok=True)
+    path = Path(filename).expanduser()
 
-    # download file from LAMDA if it does not exist
-    if not filename.endswith('.dat'):
-        filename = filename + '.dat'
+    if path.exists():
+        return path.open()
 
-    data = dir_lamda / filename
+    logger.info(f'{path} does not exist')
+    logger.info(f'trying to find {path.name} in {DIR_LAMDA}')
 
-    if not data.exists():
-        logger.info(f'{filename} does not exist in {dir_lamda}')
-        logger.info(f'downloading {filename} from LAMDA ...')
+    path = DIR_LAMDA / path.name
 
-        r = requests.get(f'{URL_LAMDA}/{filename}')
-        r.raise_for_status()
+    if path.exists():
+        return path.open()
 
-        with data.open('w') as f:
-            f.write(r.text)
+    logger.info(f'{path} does not exist')
+    logger.info(f'downloading {path.name} from LAMDA')
 
-    # open file
-    return data.open()
+    r = requests.get(f'{URL_LAMDA}/{filename}')
+    r.raise_for_status()
+
+    with path.open('w') as f:
+        f.write(r.text)
+
+    return path.open()
 
 
 def read_until(f, pattern):
