@@ -23,11 +23,11 @@ k_B = k_B.value
 DIMS = 'level_from', 'level_to', 'T_kin', 'coll_partner'
 
 COLL_PARTNER_LAMDA = {'1': 'H2',
-                '2': 'para-H2',
+                      '2': 'para-H2',
                       '3': 'ortho-H2',
-                '4': 'electrons',
-                '5': 'H',
-                '6': 'He'}
+                      '4': 'electrons',
+                      '5': 'H',
+                      '6': 'He'}
 
 
 # classes
@@ -43,6 +43,64 @@ class MolDB:
             db = self._calc_ein_B(db)
 
         self.db = db
+
+    @property
+    def transitions(self):
+        index_from, index_to = np.where(~np.isnan(self.db.ein_A))
+        level_from = self.db.level_from[index_from].values
+        level_to   = self.db.level_to[index_to].values
+        return np.array(list(zip(level_from, level_to)))
+
+    def freq(self, level_from, level_to):
+        return self._along_transition(self.db.freq, level_from, level_to)
+
+    def ein_A(self, level_from, level_to):
+        return self._along_transition(self.db.ein_A, level_from, level_to)
+
+    def ein_B(self, level_from, level_to):
+        return self._along_transition(self.db.ein_B, level_from, level_to)
+
+    def gamma(self, level_from, level_to, T_kin, coll_partner=None):
+        gamma_p = self.db.gamma.sel({DIMS[3]: coll_partner})
+        interp  = gamma_p.interp({DIMS[2]: T_kin})
+        return self._along_transition(interp, level_from, level_to)
+
+    def n_crit(self, level_from, level_to, T_kin, coll_partner=None):
+        gamma = self.gamma(level_from, level_to, T_kin, coll_partner)
+        ein_A = self.ein_A(level_from, level_to)
+        return ein_A / gamma
+
+    def Q(self, T_ex):
+        pass
+
+    @classmethod
+    def from_cdms(cls, filename):
+        pass
+
+    @classmethod
+    def from_lamda(cls, filename):
+        db = create_db_lamda(filename)
+        return cls(db=db)
+
+    @classmethod
+    def from_netcdf(cls, filename):
+        db = xr.open_dataset(filename)
+        return cls(db=db)
+
+    def to_netcdf(self, filename):
+        self.db.to_netcdf(filename)
+
+    @staticmethod
+    def _along_transition(dataarray, level_from, level_to):
+        if isinstance(level_from, (str, int)):
+            level_from = [level_from]
+
+        if isinstance(level_to, (str, int)):
+            level_to = [level_to]
+
+        level_from = xr.DataArray(np.array(level_from, str), dims=DIMS[0])
+        level_to   = xr.DataArray(np.array(level_to, str), dims=DIMS[0])
+        return dataarray.loc[level_from, level_to]
 
     @staticmethod
     def _create_db(db):
@@ -76,44 +134,6 @@ class MolDB:
 
         db['ein_B'] = DIMS[:2], ein_B
         return db
-
-    @classmethod
-    def from_cdms(cls, filename):
-        pass
-
-    @classmethod
-    def from_lamda(cls, filename):
-        db = create_db_lamda(filename)
-        return cls(db=db)
-
-    @classmethod
-    def from_netcdf(cls, filename):
-        db = xr.open_dataset(filename)
-        return cls(db=db)
-
-    def to_netcdf(self, filename):
-        self.db.to_netcdf(filename)
-
-    def freq(self, lv_from, lv_to):
-        lv_from, lv_to = str(lv_from), str(lv_to)
-        return self.db.freq.loc[lv_from, lv_to].values
-
-    def ein_A(self, lv_from, lv_to):
-        lv_from, lv_to = str(lv_from), str(lv_to)
-        return self.db.ein_A.loc[lv_from, lv_to].values
-
-    def ein_B(self, lv_from, lv_to):
-        lv_from, lv_to = str(lv_from), str(lv_to)
-        return self.db.ein_B.loc[lv_from, lv_to].values
-
-    def gamma(self, lv_from, lv_to, T_kin, coll_p):
-        pass
-
-    def n_crit(self, transition, T_kin):
-        pass
-
-    def Q(self, T_ex):
-        pass
 
     def __repr__(self):
         return f'MolDB({self.db.name.values})'
