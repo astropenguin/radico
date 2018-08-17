@@ -20,11 +20,11 @@ h   = h.value
 c   = c.value
 k_B = k_B.value
 
-DIMS = 'lv_from', 'lv_to', 'T_kin', 'coll_p'
+DIMS = 'level_from', 'level_to', 'T_kin', 'coll_partner'
 
-COLL_P_LAMDA = {'1': 'H2',
+COLL_PARTNER_LAMDA = {'1': 'H2',
                 '2': 'para-H2',
-                '3': 'otrho-H2',
+                      '3': 'ortho-H2',
                 '4': 'electrons',
                 '5': 'H',
                 '6': 'He'}
@@ -162,7 +162,7 @@ def create_db_lamda(filename):
         for i in range(n_partners):
             ra.read_until(f, '^!')
             index = re.search('^(\d+)', next(f))[0]
-            li_partner.append(COLL_P_LAMDA[index])
+            li_partner.append(COLL_PARTNER_LAMDA[index])
 
             ra.read_until(f, '^!')
             li_n_colltrans.append(int(next(f)))
