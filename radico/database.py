@@ -36,11 +36,9 @@ class MolDB:
         if db is None:
             db = self._create_db()
 
-        if 'rel_g' not in db:
-            db = self._calc_rel_g(db)
-
-        if 'ein_B' not in db:
-            db = self._calc_ein_B(db)
+        self._calc_rel_g(db)
+        self._calc_ein_B(db)
+        self._calc_gamma_lu(db)
 
         self.db = db
 
@@ -61,17 +59,14 @@ class MolDB:
         return self._along_transition(self.db.ein_B, level_from, level_to)
 
     def gamma(self, level_from, level_to, T_kin, coll_partner=None):
-        gamma_p = self.db.gamma.sel({DIMS[3]: coll_partner})
-        interp  = gamma_p.interp({DIMS[2]: T_kin})
+        gamma_p = self.db.gamma.sel(coll_partner=coll_partner)
+        interp  = gamma_p.interp(T_kin=T_kin)
         return self._along_transition(interp, level_from, level_to)
 
     def n_crit(self, level_from, level_to, T_kin, coll_partner=None):
         gamma = self.gamma(level_from, level_to, T_kin, coll_partner)
         ein_A = self.ein_A(level_from, level_to)
         return ein_A / gamma
-
-    def Q(self, T_ex):
-        pass
 
     @classmethod
     def from_cdms(cls, filename):
@@ -98,8 +93,9 @@ class MolDB:
         if isinstance(level_to, (str, int)):
             level_to = [level_to]
 
-        level_from = xr.DataArray(np.array(level_from, str), dims=DIMS[0])
-        level_to   = xr.DataArray(np.array(level_to, str), dims=DIMS[0])
+        dim = dataarray.dims[0]
+        level_from = xr.DataArray(np.array(level_from, str), dims=dim)
+        level_to   = xr.DataArray(np.array(level_to, str), dims=dim)
         return dataarray.loc[level_from, level_to]
 
     @staticmethod
@@ -108,17 +104,22 @@ class MolDB:
 
     @staticmethod
     def _calc_rel_g(db):
+        if 'rel_g' in db:
+            return
+
         g    = db.g.values
         freq = db.freq.values
 
         rel_g = g[:,None] / g
-        rel_g[np.isnan(freq)] = np.nan
+        # rel_g[np.isnan(freq)] = np.nan
 
         db['rel_g'] = DIMS[:2], rel_g
-        return db
 
     @staticmethod
     def _calc_ein_B(db):
+        if 'ein_B' in db:
+            return
+
         freq  = db.freq.values
         ein_A = db.ein_A.values
         rel_g = db.rel_g.values
@@ -133,7 +134,21 @@ class MolDB:
         ein_B[triu] = B_lu[triu]
 
         db['ein_B'] = DIMS[:2], ein_B
-        return db
+
+    @staticmethod
+    def _calc_gamma_lu(db):
+        freq     = db.freq
+        rel_g    = db.rel_g
+        T_kin    = db.T_kin
+        gamma_ul = db.gamma
+
+        triu = np.triu_indices_from(db.ein_A)
+
+        if not np.isnan(gamma_ul.values[triu]).all():
+            return
+
+        gamma_lu = gamma_ul * rel_g * np.exp(-(h*freq) / (k_B*T_kin))
+        db['gamma'].values[triu] = np.swapaxes(gamma_lu.values, 0, 1)[triu]
 
     def __repr__(self):
         return f'MolDB({self.db.name.values})'
@@ -247,8 +262,8 @@ def create_db_lamda(filename):
         shape = n_levels, n_levels, n_colltemps, 1
         gamma = np.full(shape, np.nan)
 
-        for i, (u, l) in enumerate(zip(n_from, n_to)):
-            gamma[u-1, l-1, :, 0] = gamma_ul[i]
+        for j, (u, l) in enumerate(zip(n_from, n_to)):
+            gamma[u-1, l-1, :, 0] = gamma_ul[j]
 
         dims = DIMS
         coords = {dims[0]: (dims[0], Q),
